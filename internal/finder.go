@@ -136,14 +136,13 @@ func (f *Finder) findSku() error {
 	}
 
 	if len(words) == 0 {
-		return errors.New("no_words")
+		return ErrNoWords
 	}
 
 	for word, count := range words {
 		f.internal.WordsToCheck = append(f.internal.WordsToCheck, SkuFinderWord{
-			Count:     count,
-			Word:      word,
-			StockxUrl: fmt.Sprintf("https://stockx.com/search?s=%s", word),
+			Count: count,
+			Word:  word,
 		})
 	}
 
@@ -171,14 +170,13 @@ func (f *Finder) findSkuFromOtherString() error {
 	}
 
 	if len(words) == 0 {
-		return errors.New("no_words")
+		return ErrNoWords
 	}
 
 	for word, count := range words {
 		f.internal.WordsToCheck = append(f.internal.WordsToCheck, SkuFinderWord{
-			Count:     count,
-			Word:      word,
-			StockxUrl: fmt.Sprintf("https://stockx.com/search?s=%s", word),
+			Count: count,
+			Word:  word,
 		})
 	}
 
@@ -219,6 +217,10 @@ func (f *Finder) GetSku() ([]SkuFinderWord, error) {
 	err = f.findSku()
 
 	if err != nil {
+		if err == ErrNoWords {
+			return []SkuFinderWord{}, nil
+		}
+
 		return []SkuFinderWord{}, err
 	}
 

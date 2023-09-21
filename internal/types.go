@@ -34,7 +34,6 @@ type Config struct {
 }
 
 type SkuFinderWord struct {
-	Count     int    `json:"count"`
-	Word      string `json:"word"`
-	StockxUrl string `json:"stockxUrl"`
+	Count int    `json:"count"`
+	Word  string `json:"word"`
 }
