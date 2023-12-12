@@ -1,8 +1,8 @@
-package internal
+package finder
 
 import http "github.com/vimbing/fhttp"
 
-func (f *Finder) Headers() http.Header {
+func (f *Finder) headers() http.Header {
 	return http.Header{
 		"authority":                  {"lens.google.com"},
 		"accept":                     {"*/*"},
@@ -26,7 +26,7 @@ func (f *Finder) Headers() http.Header {
 	}
 }
 
-func (f *Finder) SearchHeaders() http.Header {
+func (f *Finder) searchHeaders() http.Header {
 	return http.Header{
 		"authority":                   {"lens.google.com"},
 		"accept":                      {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
@@ -52,6 +52,6 @@ func (f *Finder) SearchHeaders() http.Header {
 
 }
 
-func (f *Finder) AddAdditionalCheckFunc(fc AdditionalCheckFunc) {
-	f.AdditionalCheckFunc = fc
+func (f *Finder) SetAdditionalCheckFunc(fc AdditionalCheckFunc) {
+	f.internal.config.AdditionalCheckFunc = fc
 }

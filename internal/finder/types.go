@@ -1,9 +1,18 @@
-package internal
+package finder
 
 import (
 	"regexp"
-	"skufinder/internal/http"
+
+	"github.com/vimbing/http"
 )
+
+type config struct {
+	SkuRegexp           *regexp.Regexp
+	AdditionalCheckFunc AdditionalCheckFunc
+	MinimumLength       int
+	MaximumLength       int
+	Photo               string
+}
 
 type internal struct {
 	Client         *http.Client
@@ -13,17 +22,13 @@ type internal struct {
 	Occurences     map[string]int
 	PhotoBytes     []byte
 	OtherString    string
+	config         config
 }
 
 type AdditionalCheckFunc func(string) bool
 
 type Finder struct {
-	internal            internal
-	SkuRegexp           *regexp.Regexp
-	AdditionalCheckFunc AdditionalCheckFunc
-	MinimumLength       int
-	MaximumLength       int
-	Photo               string
+	internal internal
 }
 
 type Config struct {

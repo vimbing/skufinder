@@ -1,11 +1,10 @@
-package internal
+package finder
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
-	"skufinder/internal/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,24 +17,14 @@ func (f *Finder) getPhoto() error {
 	fmt.Println("Getting photo bytes...")
 
 	return retry.Re{Max: 5, Delay: time.Second * 3}.Try(func() error {
-		res, err := f.internal.Client.Request(&http.Request{
-			Method: "GET",
-			Url:    f.Photo,
-		})
+
+		res, err := f.internal.Client.Get(f.internal.config.Photo)
 
 		if err != nil {
 			return err
 		}
 
-		defer res.Body.Close()
-
-		photoBytes, err := f.internal.Client.GetResponseBodyBytes(res)
-
-		if err != nil {
-			return err
-		}
-
-		f.internal.PhotoBytes = photoBytes
+		f.internal.PhotoBytes = res.Body
 
 		fmt.Println("Photo bytes successfully scraped...")
 
@@ -47,24 +36,17 @@ func (f *Finder) uploadPhoto() error {
 	fmt.Println("Uploading photo to google lens...")
 
 	return retry.Re{Max: 5, Delay: time.Second * 3}.Try(func() error {
-		res, err := f.internal.Client.Request(&http.Request{
-			Method:  "POST",
-			Url:     "https://lens.google.com/_/upload/",
-			Body:    bytes.NewBuffer(f.internal.PhotoBytes),
-			Headers: f.Headers(),
-		})
+		res, err := f.internal.Client.Post(
+			"https://lens.google.com/_/upload/",
+			bytes.NewBuffer(f.internal.PhotoBytes),
+			f.headers(),
+		)
 
 		if err != nil {
 			return err
 		}
 
-		defer res.Body.Close()
-
-		body, err := f.internal.Client.GetResponseBodyString(res)
-
-		if err != nil {
-			return err
-		}
+		body := res.BodyString()
 
 		urlFirst := regexp.MustCompile(`":"\/[^"]+`).FindString(string(body))
 
@@ -90,19 +72,16 @@ func (f *Finder) getLensResults() error {
 	fmt.Println("Scraping google lens results...")
 
 	return retry.Re{Max: 5, Delay: time.Second * 3}.Try(func() error {
-		res, err := f.internal.Client.Request(&http.Request{
-			Method:  "GET",
-			Url:     f.internal.Url,
-			Headers: f.SearchHeaders(),
-		})
+		res, err := f.internal.Client.Get(
+			f.internal.Url,
+			f.searchHeaders(),
+		)
 
 		if err != nil {
 			return err
 		}
 
-		defer res.Body.Close()
-
-		f.internal.LensResultBody, err = f.internal.Client.GetResponseBodyString(res)
+		f.internal.LensResultBody = res.BodyString()
 
 		fmt.Println("Google lens results successfully scraped!")
 
@@ -118,10 +97,10 @@ func (f *Finder) findSku() error {
 
 	for _, resultData := range resultDatas {
 		for _, word := range strings.Split(resultData, " ") {
-			if len(word) >= f.MinimumLength && len(word) <= f.MaximumLength && f.SkuRegexp.Match([]byte(word)) && !regexp.MustCompile("[!@#$%^&*()_+=\\[\\]{};':\"\\\\|,.<>/?`~]").MatchString(word) {
-				word = f.SkuRegexp.FindString(word)
+			if len(word) >= f.internal.config.MinimumLength && len(word) <= f.internal.config.MaximumLength && f.internal.config.SkuRegexp.Match([]byte(word)) && !regexp.MustCompile("[!@#$%^&*()_+=\\[\\]{};':\"\\\\|,.<>/?`~]").MatchString(word) {
+				word = f.internal.config.SkuRegexp.FindString(word)
 
-				if f.AdditionalCheckFunc != nil && !f.AdditionalCheckFunc(word) {
+				if f.internal.config.AdditionalCheckFunc != nil && !f.internal.config.AdditionalCheckFunc(word) {
 					continue
 				}
 
@@ -149,41 +128,7 @@ func (f *Finder) findSku() error {
 	return nil
 }
 
-func (f *Finder) findSkuFromOtherString() error {
-	words := make(map[string]int)
-
-	for _, word := range strings.Split(f.internal.OtherString, " ") {
-		if len(word) >= f.MinimumLength && len(word) <= f.MaximumLength && f.SkuRegexp.Match([]byte(word)) && !regexp.MustCompile("[!@#$%^&*()_+=\\[\\]{};':\"\\\\|,.<>/?`~]").MatchString(word) {
-			word = f.SkuRegexp.FindString(word)
-
-			if f.AdditionalCheckFunc != nil && !f.AdditionalCheckFunc(word) {
-				continue
-			}
-
-			if _, ok := words[strings.ToLower(word)]; ok {
-				words[strings.ToLower(word)]++
-				continue
-			}
-
-			words[strings.ToLower(word)] = 1
-		}
-	}
-
-	if len(words) == 0 {
-		return ErrNoWords
-	}
-
-	for word, count := range words {
-		f.internal.WordsToCheck = append(f.internal.WordsToCheck, SkuFinderWord{
-			Count: count,
-			Word:  word,
-		})
-	}
-
-	return nil
-}
-
-func (f *Finder) Sort() ([]SkuFinderWord, error) {
+func (f *Finder) sort() ([]SkuFinderWord, error) {
 	sort.Slice(f.internal.WordsToCheck, func(i, j int) bool {
 		return f.internal.WordsToCheck[i].Count > f.internal.WordsToCheck[j].Count
 	})
@@ -224,17 +169,5 @@ func (f *Finder) GetSku() ([]SkuFinderWord, error) {
 		return []SkuFinderWord{}, err
 	}
 
-	return f.Sort()
-}
-
-func (f *Finder) GetSkuFromString(otherString string) ([]SkuFinderWord, error) {
-	f.internal.OtherString = otherString
-
-	err := f.findSkuFromOtherString()
-
-	if err != nil {
-		return []SkuFinderWord{}, err
-	}
-
-	return f.Sort()
+	return f.sort()
 }

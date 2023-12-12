@@ -1,9 +1,9 @@
 module skufinder
 
-go 1.20
+go 1.21.1
 
 require (
-	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/ansel1/merry v1.7.0 // indirect
 	github.com/ansel1/merry/v2 v2.0.1 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
@@ -25,7 +25,9 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/vimbing/cclient v0.0.0-20230405121047-abcd63de9a96 // indirect
 	github.com/vimbing/fhttp v0.0.0-20221020151142-202d69962c22 // indirect
-	github.com/vimbing/utls v0.0.0-20221003221406-2f6094b8625d // indirect
+	github.com/vimbing/http v0.0.0-20231126214518-662f8d30ff87 // indirect
+	github.com/vimbing/utls v0.0.0-20230220162003-5720b08bfd56 // indirect
+	github.com/zhangyunhao116/fastrand v0.3.0 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
 	gitlab.com/yawning/utls.git v0.0.12-1 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
