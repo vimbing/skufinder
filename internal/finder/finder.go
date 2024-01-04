@@ -89,27 +89,44 @@ func (f *Finder) getLensResults() error {
 	})
 }
 
-func (f *Finder) findSku() error {
+func (f *Finder) handleWord(wordsMap map[string]int, word string) {
+	word = f.internal.config.SkuRegexp.FindString(word)
+
+	if f.internal.config.AdditionalCheckFunc != nil && !f.internal.config.AdditionalCheckFunc(word) {
+		return
+	}
+
+	if _, ok := wordsMap[strings.ToLower(word)]; ok {
+		wordsMap[strings.ToLower(word)]++
+		return
+	}
+
+	wordsMap[strings.ToLower(word)] = 1
+}
+
+func (f wordsMap) toSkuFinderWordArray() []SkuFinderWord {
+	arr := []SkuFinderWord{}
+
+	for word, count := range f {
+		arr = append(arr, SkuFinderWord{
+			Count: count,
+			Word:  word,
+		})
+	}
+
+	return arr
+}
+
+func (f *Finder) bruteForceFindSku() error {
 	resultDatasRegexp := regexp.MustCompile(`>AF_initDataCallback[^<]+`)
 	resultDatas := resultDatasRegexp.FindAllString(f.internal.LensResultBody, -1)
 
-	words := make(map[string]int)
+	words := make(wordsMap)
 
 	for _, resultData := range resultDatas {
 		for _, word := range strings.Split(resultData, " ") {
 			if len(word) >= f.internal.config.MinimumLength && len(word) <= f.internal.config.MaximumLength && f.internal.config.SkuRegexp.Match([]byte(word)) && !regexp.MustCompile("[!@#$%^&*()_+=\\[\\]{};':\"\\\\|,.<>/?`~]").MatchString(word) {
-				word = f.internal.config.SkuRegexp.FindString(word)
-
-				if f.internal.config.AdditionalCheckFunc != nil && !f.internal.config.AdditionalCheckFunc(word) {
-					continue
-				}
-
-				if _, ok := words[strings.ToLower(word)]; ok {
-					words[strings.ToLower(word)]++
-					continue
-				}
-
-				words[strings.ToLower(word)] = 1
+				f.handleWord(words, word)
 			}
 		}
 	}
@@ -118,15 +135,28 @@ func (f *Finder) findSku() error {
 		return ErrNoWords
 	}
 
-	for word, count := range words {
-		f.internal.WordsToCheck = append(f.internal.WordsToCheck, SkuFinderWord{
-			Count: count,
-			Word:  word,
-		})
-	}
+	f.internal.WordsToCheck = words.toSkuFinderWordArray()
 
 	return nil
 }
+
+// TODO
+// func (f *Finder) findSku() error {
+// 	parser := googleParser.Init(f.internal.LensResultBody)
+
+// 	items, err := parser.Parse()
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	for _, item := range items {
+// 		f.handleWord(words, word)
+
+// 	}
+
+// 	return nil
+// }
 
 func (f *Finder) sort() ([]SkuFinderWord, error) {
 	sort.Slice(f.internal.WordsToCheck, func(i, j int) bool {
@@ -159,7 +189,7 @@ func (f *Finder) GetSku() ([]SkuFinderWord, error) {
 		return []SkuFinderWord{}, err
 	}
 
-	err = f.findSku()
+	err = f.bruteForceFindSku()
 
 	if err != nil {
 		if err == ErrNoWords {

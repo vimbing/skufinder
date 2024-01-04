@@ -6,6 +6,8 @@ import (
 	"github.com/vimbing/http"
 )
 
+type wordsMap map[string]int
+
 type config struct {
 	SkuRegexp           *regexp.Regexp
 	AdditionalCheckFunc AdditionalCheckFunc
